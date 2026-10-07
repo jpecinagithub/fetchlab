@@ -18,7 +18,7 @@ import {
   examplesList,
   examplesDelete,
 } from './lib/idb.js';
-import { sanitizeForHistory } from './lib/security.js';
+import { sanitizeForHistory, REDACTED } from './lib/security.js';
 import { parseCurl, requestToCurl } from './lib/curl.js';
 import { EXAMPLES } from './lib/examples.js';
 import { t, SUPPORTED_LANGS } from './lib/i18n.js';
@@ -244,8 +244,24 @@ export default function App() {
     });
   };
 
+  // History entries store secrets as [REDACTED]. When loading one back into the
+  // editor, blank those fields so it is obvious the credential must be re-entered
+  // instead of sending the literal "[REDACTED]" string.
+  const scrubRedacted = (req) => {
+    const cleanRows = (rows) =>
+      (rows || []).map((r) => (r.value === REDACTED ? { ...r, value: '' } : r));
+    const out = { ...req, headers: cleanRows(req.headers), params: cleanRows(req.params) };
+    if (out.auth) {
+      out.auth = { ...out.auth };
+      if (out.auth.bearer === REDACTED) out.auth.bearer = '';
+      if (out.auth.basicPass === REDACTED) out.auth.basicPass = '';
+      if (out.auth.apiKey === REDACTED) out.auth.apiKey = '';
+    }
+    return out;
+  };
+
   const loadRequest = (req) => {
-    setRequest(JSON.parse(JSON.stringify({ ...blankRequest(), ...req })));
+    setRequest(scrubRedacted(JSON.parse(JSON.stringify({ ...blankRequest(), ...req }))));
     setResponse(null);
     setReqError(null);
     setSidebarOpen(false);
