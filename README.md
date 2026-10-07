@@ -12,7 +12,8 @@ simplicity, speed and learning. **100% browser-based: no backend, no accounts, n
 - **History:** the last 50 *HTTP 200* responses only, persisted in IndexedDB, with secrets
   (`Authorization`, `Cookie`, `X-API-Key`, …) redacted as `[REDACTED]` before storage
 - cURL import / export, request timeouts, friendly CORS / network / timeout error messages
-- 5 verified example requests (JSONPlaceholder, DummyJSON, httpbin) for first use
+- 5 verified example requests (JSONPlaceholder, DummyJSON, httpbin) for first use, plus your
+  own named examples saved to IndexedDB from any configured request
 - Light / Dark / System themes, EN/ES (EN default), responsive mobile layout, PWA installable
 
 ## Privacy

@@ -9,7 +9,15 @@ import HistoryPanel from './components/HistoryPanel.jsx';
 import { Modal, copyText } from './components/ui.jsx';
 import { newKvRow } from './components/KvEditor.jsx';
 import { executeRequest, buildFetchInput, METHODS_WITH_BODY } from './lib/apiClient.js';
-import { historyAdd, historyList, historyDelete, historyClear } from './lib/idb.js';
+import {
+  historyAdd,
+  historyList,
+  historyDelete,
+  historyClear,
+  examplesAdd,
+  examplesList,
+  examplesDelete,
+} from './lib/idb.js';
 import { sanitizeForHistory } from './lib/security.js';
 import { parseCurl, requestToCurl } from './lib/curl.js';
 import { EXAMPLES } from './lib/examples.js';
@@ -70,6 +78,9 @@ export default function App() {
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
+  const [customExamples, setCustomExamples] = useState([]);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [saveName, setSaveName] = useState('');
   const [toast, setToast] = useState('');
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || 'system');
   const [lang, setLang] = useState(() => localStorage.getItem(LANG_KEY) || 'en');
@@ -124,9 +135,10 @@ export default function App() {
     document.documentElement.lang = lang;
   }, [lang]);
 
-  // History load
+  // History + saved examples load
   useEffect(() => {
     historyList().then(setHistory).catch(() => setHistory([]));
+    examplesList().then(setCustomExamples).catch(() => setCustomExamples([]));
   }, []);
 
   // PWA install prompt
@@ -264,6 +276,47 @@ export default function App() {
     }
   };
 
+  const suggestedName = () => {
+    const req = requestRef.current;
+    try {
+      const u = new URL(req.url);
+      const path = u.pathname && u.pathname !== '/' ? u.pathname : '';
+      return `${req.method} ${u.hostname}${path}`;
+    } catch {
+      return req.method ? `${req.method} request` : '';
+    }
+  };
+
+  const shortExampleUrl = (url) => {
+    try {
+      const u = new URL(url);
+      const p = u.hostname + (u.pathname !== '/' ? u.pathname : '') + u.search;
+      return p.length > 52 ? p.slice(0, 51) + '…' : p;
+    } catch {
+      return String(url).length > 52 ? String(url).slice(0, 51) + '…' : String(url);
+    }
+  };
+
+  const doSaveExample = async () => {
+    const name = saveName.trim();
+    if (!name) return;
+    try {
+      await examplesAdd({
+        id: newId(),
+        name,
+        timestamp: Date.now(),
+        request: snapshotRequest(requestRef.current),
+      });
+      setCustomExamples(await examplesList());
+      setSaveOpen(false);
+      setSaveName('');
+      setSidebarTab('examples');
+      notify(tr('saved'));
+    } catch {
+      notify(tr('errUnknown'));
+    }
+  };
+
   const showEmpty = !response && !reqError && !sending;
   const paramCount = request.params.filter((r) => String(r.key || '').trim() !== '').length;
   const headerCount = request.headers.filter((r) => String(r.key || '').trim() !== '').length;
@@ -370,6 +423,53 @@ export default function App() {
             />
           ) : (
             <div className="examples-panel">
+              <h4 className="examples-h">
+                {tr('myExamples')}
+                {customExamples.length > 0 && (
+                  <span className="tab-badge">{customExamples.length}</span>
+                )}
+              </h4>
+              {customExamples.length === 0 ? (
+                <p className="editor-hint">{tr('noCustomExamples')}</p>
+              ) : (
+                <ul className="examples-list">
+                  {customExamples.map((ex) => (
+                    <li key={ex.id} className="example-item">
+                      <button
+                        type="button"
+                        className="example-load"
+                        onClick={() => loadRequest(ex.request)}
+                        aria-label={ex.name}
+                      >
+                        <span className={`method-pill m-${ex.request.method}`}>
+                          {ex.request.method}
+                        </span>
+                        <span className="example-text">
+                          <span className="example-title">{ex.name}</span>
+                          <span className="example-desc mono">
+                            {shortExampleUrl(ex.request.url)}
+                          </span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-btn icon-btn-sm"
+                        aria-label={tr('deleteEntry')}
+                        title={tr('deleteEntry')}
+                        onClick={async () => {
+                          await examplesDelete(ex.id);
+                          setCustomExamples(await examplesList());
+                        }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M3 3l10 10M13 3L3 13" />
+                        </svg>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <h4 className="examples-h">{tr('builtInExamples')}</h4>
               <p className="editor-hint">{tr('examplesSubtitle')}</p>
               <ul className="examples-list">
                 {EXAMPLES.map((ex) => (
@@ -437,6 +537,18 @@ export default function App() {
               </button>
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => doCopyCurl()}>
                 {tr('copyAsCurl')}
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                disabled={!request.url.trim()}
+                title={tr('saveExample')}
+                onClick={() => {
+                  setSaveName(suggestedName());
+                  setSaveOpen(true);
+                }}
+              >
+                {tr('saveExample')}
               </button>
             </div>
           </div>
@@ -528,6 +640,40 @@ export default function App() {
             </button>
             <button type="button" className="btn btn-primary" onClick={doImportCurl}>
               {tr('importCurlButton')}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {saveOpen && (
+        <Modal title={tr('saveExample')} onClose={() => setSaveOpen(false)}>
+          <label className="field-label" htmlFor="example-name">
+            {tr('exampleName')}
+          </label>
+          <input
+            id="example-name"
+            className="input"
+            value={saveName}
+            autoFocus
+            spellCheck={false}
+            autoComplete="off"
+            placeholder={tr('exampleNamePlaceholder')}
+            onChange={(e) => setSaveName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') doSaveExample();
+            }}
+          />
+          <div className="modal-actions">
+            <button type="button" className="btn btn-ghost" onClick={() => setSaveOpen(false)}>
+              {tr('confirmCancel')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={!saveName.trim()}
+              onClick={doSaveExample}
+            >
+              {tr('save')}
             </button>
           </div>
         </Modal>
