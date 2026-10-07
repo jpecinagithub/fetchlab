@@ -28,8 +28,10 @@ function KvTable({ rows, emptyNote }) {
   );
 }
 
-function DetailModal({ entry, t, onClose, onRunAgain, onDuplicate, onDelete, onCopyCurl }) {
+function DetailModal({ entry, t, onClose, onRunAgain, onDuplicate, onDelete, onCopyCurl, onRename }) {
   const { request: req, response: res } = entry;
+  const [name, setName] = useState(entry.name || '');
+  const saveName = () => onRename(entry.id, name.trim());
   const bodyPreview =
     res.kind === 'json'
       ? (() => {
@@ -42,7 +44,22 @@ function DetailModal({ entry, t, onClose, onRunAgain, onDuplicate, onDelete, onC
       : res.body;
 
   return (
-    <Modal title={`${req.method} ${shortPath(req.url)}`} onClose={onClose} wide>
+    <Modal title={entry.name || `${req.method} ${shortPath(req.url)}`} onClose={onClose} wide>
+      <div className="detail-name-row">
+        <input
+          className="input"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') saveName();
+          }}
+          placeholder={t('callName')}
+          aria-label={t('callName')}
+        />
+        <button type="button" className="btn btn-ghost btn-sm" onClick={saveName}>
+          {t('save')}
+        </button>
+      </div>
       <div className="detail-actions">
         <button type="button" className="btn btn-primary btn-sm" onClick={onRunAgain}>
           {t('runAgain')}
@@ -134,6 +151,7 @@ export default function HistoryPanel({
   onDelete,
   onClear,
   onCopyCurl,
+  onRename,
 }) {
   const [detail, setDetail] = useState(null);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -168,7 +186,9 @@ export default function HistoryPanel({
               >
                 <span className={`method-pill m-${e.request.method}`}>{e.request.method}</span>
                 <span className="history-main">
-                  <span className="history-path mono">{shortPath(e.request.url)}</span>
+                  <span className={`history-path ${e.name ? '' : 'mono'}`}>
+                    {e.name || shortPath(e.request.url)}
+                  </span>
                   <span className="history-meta">
                     <span className={`status-dot st-${statusClass(e.response.status)}`} />
                     {e.response.status} · {formatDuration(e.response.duration)} ·{' '}
@@ -220,6 +240,10 @@ export default function HistoryPanel({
             setDetail(null);
           }}
           onCopyCurl={() => onCopyCurl(detail.request)}
+          onRename={(id, newName) => {
+            onRename(id, newName);
+            setDetail((d) => (d && d.id === id ? { ...d, name: newName || undefined } : d));
+          }}
         />
       )}
 

@@ -1143,12 +1143,8 @@ textarea {
 .status-dot.st-neutral { background: var(--muted); }
 
 .history-del {
-  opacity: 0;
-}
-
-.history-item:hover .history-del,
-.history-item:focus-within .history-del {
   opacity: 1;
+  flex: 0 0 auto;
 }
 
 .history-note {
@@ -1160,6 +1156,17 @@ textarea {
 }
 
 /* ---------- Detail modal ---------- */
+
+.detail-name-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.detail-name-row .input {
+  flex: 1;
+  min-width: 0;
+}
 
 .detail-actions {
   display: flex;

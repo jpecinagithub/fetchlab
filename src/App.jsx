@@ -14,6 +14,7 @@ import {
   historyList,
   historyDelete,
   historyClear,
+  historyUpdate,
   examplesAdd,
   examplesList,
   examplesDelete,
@@ -436,6 +437,14 @@ export default function App() {
                 setHistory([]);
               }}
               onCopyCurl={doCopyCurl}
+              onRename={async (id, name) => {
+                const current = history.find((h) => h.id === id);
+                if (!current) return;
+                const updated = { ...current, name: name || undefined };
+                await historyUpdate(updated);
+                setHistory(await historyList());
+                notify(tr('saved'));
+              }}
             />
           ) : (
             <div className="examples-panel">

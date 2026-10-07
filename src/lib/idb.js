@@ -71,6 +71,16 @@ export async function historyList() {
   return rows.sort((a, b) => b.timestamp - a.timestamp);
 }
 
+export async function historyUpdate(entry) {
+  const db = await openDb();
+  await new Promise((resolve, reject) => {
+    const r = tx(db, 'readwrite').put(entry);
+    r.onsuccess = () => resolve();
+    r.onerror = () => reject(r.error);
+  });
+  db.close();
+}
+
 export async function historyDelete(id) {
   const db = await openDb();
   await new Promise((resolve, reject) => {

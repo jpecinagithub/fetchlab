@@ -147,6 +147,7 @@ const STRINGS = {
     noCustomExamples: 'No saved examples yet. Configure a request and save it with a name.',
     saved: 'Saved',
     save: 'Save',
+    callName: 'Call name',
   },
   es: {
     appName: 'FetchLab',
@@ -294,6 +295,7 @@ const STRINGS = {
     noCustomExamples: 'Sin ejemplos guardados. Configura una petición y guárdala con un nombre.',
     saved: 'Guardado',
     save: 'Guardar',
+    callName: 'Nombre de la llamada',
   },
 };
 
