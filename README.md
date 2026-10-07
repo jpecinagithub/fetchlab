@@ -19,7 +19,8 @@ simplicity, speed and learning. **100% browser-based: no backend, no accounts, n
 ## Privacy
 
 - Requests execute directly from your browser to the target API. There is no proxy server.
-- History lives only in your browser's IndexedDB. Credentials are never written to history.
+- History lives only in your browser's IndexedDB, stored exactly as sent (including
+  credentials) so any entry can be re-run with one click.
 - Vercel Analytics is included for page views only — URLs, headers, bodies and API keys are
   never sent to analytics.
 

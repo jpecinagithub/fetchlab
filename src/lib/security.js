@@ -70,23 +70,16 @@ function redactResponseHeaders(headers) {
 const MAX_STORED_BODY = 500 * 1024; // 500 KB cap per stored response body
 
 /**
- * Deep-clone a history entry with every secret replaced by [REDACTED].
+ * Prepare a history entry for IndexedDB.
+ *
+ * NOTE (2026-10-07, explicit user decision overriding the original spec):
+ * the user wants history to keep every call exactly as sent, credentials
+ * included, so re-running from history works with one click. Nothing is
+ * redacted anymore — only oversized response bodies are truncated.
  * Never call this on the live request — only on the object being persisted.
  */
 export function sanitizeForHistory(entry) {
   const clone = JSON.parse(JSON.stringify(entry));
-  clone.request.headers = redactHeaderList(clone.request.headers);
-  clone.request.params = redactParams(clone.request.params);
-  clone.request.auth = redactAuth(clone.request.auth);
-  if (clone.request.body) {
-    if (Array.isArray(clone.request.body.form)) {
-      clone.request.body.form = redactParams(clone.request.body.form);
-    }
-    if (Array.isArray(clone.request.body.urlencoded)) {
-      clone.request.body.urlencoded = redactParams(clone.request.body.urlencoded);
-    }
-  }
-  clone.response.headers = redactResponseHeaders(clone.response.headers);
   if (typeof clone.response.body === 'string' && clone.response.body.length > MAX_STORED_BODY) {
     clone.response.body = clone.response.body.slice(0, MAX_STORED_BODY);
     clone.response.truncated = true;
