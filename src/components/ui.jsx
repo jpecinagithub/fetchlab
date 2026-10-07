@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export async function copyText(text) {
   const s = String(text ?? '');
@@ -35,7 +36,9 @@ export function Modal({ title, onClose, children, wide }) {
     };
   }, [onClose]);
 
-  return (
+  // Rendered via portal so no ancestor stacking context, transform or overflow
+  // can ever misplace the overlay or let page content paint above it.
+  return createPortal(
     <div className="modal-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className={`modal ${wide ? 'modal-wide' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="modal-head">
@@ -48,7 +51,8 @@ export function Modal({ title, onClose, children, wide }) {
         </div>
         <div className="modal-body">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
